@@ -2,6 +2,11 @@ const RANK_ORDER = { '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9'
 export const DEFAULT_STRATEGY_KEY = 'random_human';
 
 export const STRATEGY_LIBRARY = [
+  { key: 'pure_random', label: 'Aléatoire total', description: 'Choisit fold/call/raise/all-in totalement au hasard.' },
+  { key: 'always_call', label: 'Toujours call', description: 'Call systématique si possible, sinon check/fold.' },
+  { key: 'premium_only', label: 'Premium only', description: 'Joue seulement AA/KK/QQ/AK, fold le reste.' },
+  { key: 'pair_broadway', label: 'Paire ou Broadway', description: 'Joue les paires et AK/AQ/AJ préflop.' },
+  { key: 'hand_score', label: 'Score de main', description: 'Score simple (paire/suited/high cards) puis action selon seuil.' },
   { key: 'random_human', label: 'Aléatoire humain', description: 'Exploration aléatoire, peu de all-in.' },
   { key: 'threshold_60', label: 'Seuil 60%', description: 'Joue agressif au-dessus de 60%.' },
   { key: 'threshold_70', label: 'Seuil 70%', description: 'Très prudent, agressif au-dessus de 70%.' },
@@ -79,7 +84,66 @@ function aggressiveDecision(validActions, strength, threshold) {
   return fold ?? check ?? call ?? validActions[0];
 }
 
+function hasRanks(player, ranks) {
+  const hand = new Set(player.holeCards.map((c) => c.rank));
+  return ranks.every((rank) => hand.has(rank));
+}
+
+function hasAnyPair(player) {
+  return player.holeCards[0]?.rank && player.holeCards[0].rank === player.holeCards[1]?.rank;
+}
+
+function preflopHandScore(player) {
+  const [a, b] = player.holeCards;
+  if (!a || !b) return 0;
+  let score = 0;
+  if (a.rank === b.rank) score += 10;
+  if (a.suit === b.suit) score += 2;
+  if (RANK_ORDER[a.rank] >= 11) score += 1;
+  if (RANK_ORDER[b.rank] >= 11) score += 1;
+  return score;
+}
+
 function createStrategyChooser(key) {
+  if (key === 'pure_random') {
+    return ({ validActions }) => randomPick(validActions) ?? validActions[0];
+  }
+  if (key === 'always_call') {
+    return ({ validActions }) => findAction(validActions, 'call')
+      ?? findAction(validActions, 'check')
+      ?? findAction(validActions, 'fold')
+      ?? validActions[0];
+  }
+  if (key === 'premium_only') {
+    return ({ game, playerIndex, validActions }) => {
+      const player = game.players[playerIndex];
+      const premiumPair = hasAnyPair(player) && ['A', 'K', 'Q'].includes(player.holeCards[0]?.rank);
+      const ak = hasRanks(player, ['A', 'K']);
+      const shouldPlay = premiumPair || ak || game.stage !== 'preflop';
+      if (shouldPlay) return findAction(validActions, 'raise') ?? findAction(validActions, 'call') ?? findAction(validActions, 'check') ?? validActions[0];
+      return findAction(validActions, 'fold') ?? findAction(validActions, 'check') ?? validActions[0];
+    };
+  }
+  if (key === 'pair_broadway') {
+    return ({ game, playerIndex, validActions }) => {
+      const player = game.players[playerIndex];
+      const hasBroadway = hasRanks(player, ['A', 'K']) || hasRanks(player, ['A', 'Q']) || hasRanks(player, ['A', 'J']);
+      const shouldPlay = hasAnyPair(player) || hasBroadway || game.stage !== 'preflop';
+      if (shouldPlay) return findAction(validActions, 'raise') ?? findAction(validActions, 'call') ?? findAction(validActions, 'check') ?? validActions[0];
+      return findAction(validActions, 'fold') ?? findAction(validActions, 'check') ?? validActions[0];
+    };
+  }
+  if (key === 'hand_score') {
+    return ({ game, playerIndex, validActions }) => {
+      const player = game.players[playerIndex];
+      const preflopScore = preflopHandScore(player);
+      const postflopBoost = game.stage === 'preflop' ? 0 : Math.round(estimateStrength(game, playerIndex) * 4);
+      const score = preflopScore + postflopBoost;
+      if (score >= 12) return findAction(validActions, 'raise') ?? findAction(validActions, 'call') ?? findAction(validActions, 'check') ?? validActions[0];
+      if (score >= 9) return findAction(validActions, 'call') ?? findAction(validActions, 'check') ?? validActions[0];
+      return findAction(validActions, 'fold') ?? findAction(validActions, 'check') ?? findAction(validActions, 'call') ?? validActions[0];
+    };
+  }
   if (key === 'threshold_60') {
     return ({ game, playerIndex, validActions }) => aggressiveDecision(validActions, estimateStrength(game, playerIndex), 0.6);
   }

@@ -210,6 +210,41 @@ export class PokerGame {
     return player;
   }
 
+  resetForNewSession() {
+    this.dealerIndex = -1;
+    this.communityCards = [];
+    this.pot = 0;
+    this.currentBet = 0;
+    this.minRaise = this.bigBlind;
+    this.stage = 'idle';
+    this.handComplete = true;
+    this.activeOrder = [];
+    this.currentActorPos = 0;
+    this.toAct = new Set();
+    this.deck = [];
+    this.handLog = [];
+    this.lastWinners = [];
+
+    this.players.forEach((p) => {
+      p.stack = this.startingStack;
+      p.holeCards = [];
+      p.folded = false;
+      p.allIn = false;
+      p.currentBet = 0;
+      p.contribution = 0;
+      p.actionHistory = [];
+      p.stats = createPlayerStats(this.startingStack);
+    });
+
+    this.globalStats = {
+      handCount: 0,
+      totalPots: [],
+      averagePotHistory: [],
+      actionCounts: { fold: 0, check: 0, call: 0, raise: 0, all_in: 0 },
+      tableMoneyHistory: [this.totalTableMoney()],
+    };
+  }
+
   totalTableMoney() {
     return this.players.reduce((sum, p) => sum + p.stack, 0) + this.pot;
   }

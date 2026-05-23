@@ -10,8 +10,11 @@ Simulateur de poker Texas Hold'em (bots aléatoires) avec :
 - affichage des probabilités estimées (complètes + information incomplète)
 - gestion de la table : nombre de joueurs, reset, remplacement d'un joueur
 - stratégies configurables (seuils, adaptatif, mimétisme, tight-agressive, GTO lite)
+  - description au survol des stratégies dans l'interface
+  - nouvelles stratégies simples : aléatoire total, toujours call, premium only, paire ou Broadway, score de main
 - statistiques détaillées :
   - graphique individuel (stack + probabilité + marqueurs all-in)
+  - graphique des stacks de tous les joueurs
   - graphique global (pot total, pot moyen, argent global)
   - légendes et repères de mains sur les graphes
 - historique des actions et classement des joueurs

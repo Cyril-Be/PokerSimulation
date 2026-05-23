@@ -36,20 +36,35 @@ const el = {
   ranking: document.getElementById('ranking'),
   playerSelect: document.getElementById('playerSelect'),
   playerChart: document.getElementById('playerChart'),
+  allStacksChart: document.getElementById('allStacksChart'),
   globalChart: document.getElementById('globalChart'),
   playerLegend: document.getElementById('playerLegend'),
+  allStacksLegend: document.getElementById('allStacksLegend'),
   globalLegend: document.getElementById('globalLegend'),
 };
 
 let game;
 
 function strategyOptionsHtml(selectedKey) {
-  return STRATEGY_LIBRARY.map((s) => `<option value="${s.key}" ${s.key === selectedKey ? 'selected' : ''}>${s.label}</option>`).join('');
+  return STRATEGY_LIBRARY.map((s) => `<option value="${s.key}" title="${s.description}" ${s.key === selectedKey ? 'selected' : ''}>${s.label}</option>`).join('');
+}
+
+function findStrategyEntry(strategyKey) {
+  return STRATEGY_LIBRARY.find((s) => s.key === strategyKey) ?? STRATEGY_LIBRARY.find((s) => s.key === DEFAULT_STRATEGY_KEY) ?? STRATEGY_LIBRARY[0];
+}
+
+function syncStrategyDescription(selectEl) {
+  if (!selectEl) return;
+  const entry = findStrategyEntry(selectEl.value);
+  if (!entry) return;
+  selectEl.title = `${entry.label} — ${entry.description}`;
 }
 
 function fillStrategySelectors() {
   el.defaultStrategy.innerHTML = strategyOptionsHtml(DEFAULT_STRATEGY_KEY);
   el.replaceStrategy.innerHTML = strategyOptionsHtml(DEFAULT_STRATEGY_KEY);
+  syncStrategyDescription(el.defaultStrategy);
+  syncStrategyDescription(el.replaceStrategy);
 }
 
 function createPlayerConfigs(playerCount, strategyKey) {
@@ -198,6 +213,17 @@ function updateCharts() {
     { color: '#ff9f1c', label: 'Point all-in' },
   ]);
 
+  const stackPalette = ['#ff6b6b', '#4ecdc4', '#ffd166', '#06d6a0', '#118ab2', '#c77dff', '#f72585', '#f4a261', '#90be6d'];
+  const stackSeries = game.players.map((player, index) => ({
+    values: player.stats.stackHistory,
+    color: stackPalette[index % stackPalette.length],
+  }));
+  drawChart(el.allStacksChart, stackSeries);
+  renderLegend(el.allStacksLegend, game.players.map((player, index) => ({
+    color: stackPalette[index % stackPalette.length],
+    label: player.name,
+  })));
+
   drawChart(el.globalChart, [
     { values: game.globalStats.totalPots, color: '#ffd166' },
     { values: game.globalStats.averagePotHistory, color: '#06d6a0' },
@@ -244,6 +270,8 @@ function renderTable(activePlayerIndex = null) {
     seat.append(cards);
     el.table.append(seat);
   }
+
+  el.table.querySelectorAll('.seat-strategy-select').forEach((select) => syncStrategyDescription(select));
 
   populatePlayerControls();
   updateRanking();
@@ -356,7 +384,16 @@ el.applyPlayerCount.addEventListener('click', () => {
 });
 el.resetGame.addEventListener('click', () => {
   if (state.running) return;
-  createGame(Number(el.playerCount.value), el.defaultStrategy.value);
+  game.resetForNewSession();
+  state.stepMode = false;
+  state.running = false;
+  state.quickMode = false;
+  state.probabilities = {};
+  state.publicWinProbabilities = {};
+  setButtonsRunning();
+  el.log.innerHTML = '';
+  updateProbabilities(40, 40);
+  renderTable();
 });
 el.replacePlayer.addEventListener('click', () => {
   if (state.running) return;
@@ -381,9 +418,15 @@ el.table.addEventListener('change', (event) => {
   if (!(target instanceof HTMLSelectElement) || !target.classList.contains('seat-strategy-select')) return;
   const playerId = Number(target.dataset.playerId);
   game.setPlayerStrategy(playerId, target.value);
+  syncStrategyDescription(target);
   appendLog(`🎯 ${game.players[playerId].name} adopte ${target.value}.`);
   renderTable();
 });
+
+el.defaultStrategy.addEventListener('change', () => syncStrategyDescription(el.defaultStrategy));
+el.defaultStrategy.addEventListener('mouseover', () => syncStrategyDescription(el.defaultStrategy));
+el.replaceStrategy.addEventListener('change', () => syncStrategyDescription(el.replaceStrategy));
+el.replaceStrategy.addEventListener('mouseover', () => syncStrategyDescription(el.replaceStrategy));
 
 fillStrategySelectors();
 el.playerCount.value = String(DEFAULT_PLAYER_COUNT);

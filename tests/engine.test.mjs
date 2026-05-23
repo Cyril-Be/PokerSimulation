@@ -42,3 +42,33 @@ test('probability estimate outputs bounded values', () => {
     assert.ok(Math.abs(pr.win + pr.split + pr.lose - 1) < 0.00001);
   }
 });
+
+test('resetForNewSession resets stacks and keeps player identity/strategy', () => {
+  const game = new PokerGame({
+    playerNames: [
+      { name: 'Neo', strategyKey: 'threshold_60' },
+      { name: 'Trinity', strategyKey: 'mimic' },
+    ],
+  });
+
+  game.startHand();
+  let guard = 0;
+  while (!game.handComplete && guard < 300) {
+    game.step();
+    guard += 1;
+  }
+  game.setPlayerStrategy(0, 'gto_lite');
+  game.players[1].name = 'Trinity 2';
+
+  game.resetForNewSession();
+
+  assert.equal(game.stage, 'idle');
+  assert.equal(game.handComplete, true);
+  assert.equal(game.players[0].stack, game.startingStack);
+  assert.equal(game.players[1].stack, game.startingStack);
+  assert.equal(game.players[0].strategyKey, 'gto_lite');
+  assert.equal(game.players[1].strategyKey, 'mimic');
+  assert.equal(game.players[0].name, 'Neo');
+  assert.equal(game.players[1].name, 'Trinity 2');
+  assert.equal(game.globalStats.handCount, 0);
+});
