@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Poker Simulation</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Simulateur Texas Hold'em</h1>
+
+      <section class="controls">
+        <label>
+          Simulation rapide
+          <select id="quickHands">
+            <option value="10">10 mains</option>
+            <option value="50">50 mains</option>
+            <option value="100">100 mains</option>
+            <option value="500">500 mains</option>
+            <option value="1000">1000 mains</option>
+          </select>
+        </label>
+        <button id="runQuick">Lancer</button>
+        <button id="runSingle">Jouer 1 donne auto</button>
+        <button id="startStep">Mode pas-à-pas</button>
+        <button id="nextStep">Suivant</button>
+
+        <label>
+          Vitesse
+          <input id="speed" type="range" min="0" max="1200" step="100" value="200" />
+          <span id="speedValue"></span>
+        </label>
+      </section>
+
+      <section class="table-layout">
+        <div class="poker-table panel">
+          <div>Phase: <strong id="stage">idle</strong> | Pot: <strong id="pot">0</strong></div>
+          <h3>Cartes communes</h3>
+          <div id="communityCards" class="community"></div>
+          <h3>Joueurs</h3>
+          <div id="tableView" class="seats"></div>
+        </div>
+        <aside class="panel">
+          <h3>Classement</h3>
+          <ol id="ranking"></ol>
+          <h3>Historique des actions</h3>
+          <ul id="actionLog"></ul>
+        </aside>
+      </section>
+
+      <section class="grid-2">
+        <div class="panel">
+          <h3>Statistiques individuelles</h3>
+          <label>
+            Joueur
+            <select id="playerSelect"></select>
+          </label>
+          <svg id="playerChart" viewBox="0 0 640 260" class="chart"></svg>
+        </div>
+        <div class="panel">
+          <h3>Statistiques globales</h3>
+          <svg id="globalChart" viewBox="0 0 640 260" class="chart"></svg>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>
