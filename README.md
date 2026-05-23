@@ -7,10 +7,13 @@ Simulateur de poker Texas Hold'em (bots aléatoires) avec :
 - mode simulation rapide (10/50/100/500/1000)
 - mode automatique sur une donne
 - mode pas-à-pas avec bouton **Suivant**
-- affichage des probabilités estimées de victoire/split/défaite
+- affichage des probabilités estimées (complètes + information incomplète)
+- gestion de la table : nombre de joueurs, reset, remplacement d'un joueur
+- stratégies configurables (seuils, adaptatif, mimétisme, tight-agressive, GTO lite)
 - statistiques détaillées :
-  - graphique individuel (stack + probabilité de victoire)
+  - graphique individuel (stack + probabilité + marqueurs all-in)
   - graphique global (pot total, pot moyen, argent global)
+  - légendes et repères de mains sur les graphes
 - historique des actions et classement des joueurs
 
 ## Lancer l'application

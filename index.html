@@ -12,6 +12,26 @@
 
       <section class="controls">
         <label>
+          Nb joueurs
+          <select id="playerCount">
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6" selected>6</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+            <option value="9">9</option>
+          </select>
+        </label>
+        <label>
+          Stratégie par défaut
+          <select id="defaultStrategy"></select>
+        </label>
+        <button id="applyPlayerCount">Appliquer table</button>
+        <button id="resetGame">Reset</button>
+
+        <label>
           Simulation rapide
           <select id="quickHands">
             <option value="10">10 mains</option>
@@ -31,6 +51,26 @@
           <input id="speed" type="range" min="0" max="1200" step="100" value="200" />
           <span id="speedValue"></span>
         </label>
+      </section>
+
+      <section class="controls">
+        <label>
+          Remplacer joueur
+          <select id="replacePlayerSelect"></select>
+        </label>
+        <label>
+          Nouveau nom
+          <input id="replaceName" type="text" placeholder="Ex: Bot Neo" />
+        </label>
+        <label>
+          Stack
+          <input id="replaceStack" type="number" min="1" step="1" placeholder="1000" />
+        </label>
+        <label>
+          Stratégie
+          <select id="replaceStrategy"></select>
+        </label>
+        <button id="replacePlayer">Remplacer</button>
       </section>
 
       <section class="table-layout">
@@ -57,10 +97,12 @@
             <select id="playerSelect"></select>
           </label>
           <svg id="playerChart" viewBox="0 0 640 260" class="chart"></svg>
+          <div id="playerLegend" class="chart-legend"></div>
         </div>
         <div class="panel">
           <h3>Statistiques globales</h3>
           <svg id="globalChart" viewBox="0 0 640 260" class="chart"></svg>
+          <div id="globalLegend" class="chart-legend"></div>
         </div>
       </section>
     </main>

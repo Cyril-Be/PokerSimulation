@@ -1,8 +1,25 @@
-import { createRandomStrategy } from './strategies.js';
+import { createRandomStrategy, createStrategyByKey, DEFAULT_STRATEGY_KEY } from './strategies.js';
 
 const SUITS = ['S', 'H', 'D', 'C'];
 const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
 const RANK_VALUE = Object.fromEntries(RANKS.map((r, i) => [r, i + 2]));
+
+function createPlayerStats(startingStack) {
+  return {
+    hands: 0,
+    wins: 0,
+    folds: 0,
+    raises: 0,
+    checks: 0,
+    calls: 0,
+    allIns: 0,
+    totalBet: 0,
+    totalWon: 0,
+    stackHistory: [startingStack],
+    winProbHistory: [],
+    allInHands: [],
+  };
+}
 
 function compareScore(a, b) {
   for (let i = 0; i < Math.max(a.length, b.length); i += 1) {
@@ -126,7 +143,11 @@ export class PokerGame {
     this.smallBlind = smallBlind;
     this.bigBlind = bigBlind;
     this.dealerIndex = -1;
-    this.players = playerNames.map((name, id) => ({
+    this.players = playerNames.map((entry, id) => {
+      const name = typeof entry === 'string' ? entry : (entry?.name ?? `Bot ${id + 1}`);
+      const strategyKey = typeof entry === 'string' ? DEFAULT_STRATEGY_KEY : (entry?.strategyKey ?? DEFAULT_STRATEGY_KEY);
+      const strategy = strategyFactory({ strategyKey, id, name });
+      return {
       id,
       name,
       stack: startingStack,
@@ -136,21 +157,11 @@ export class PokerGame {
       currentBet: 0,
       contribution: 0,
       actionHistory: [],
-      strategy: strategyFactory(),
-      stats: {
-        hands: 0,
-        wins: 0,
-        folds: 0,
-        raises: 0,
-        checks: 0,
-        calls: 0,
-        allIns: 0,
-        totalBet: 0,
-        totalWon: 0,
-        stackHistory: [startingStack],
-        winProbHistory: [],
-      },
-    }));
+      strategyKey,
+      strategy,
+      stats: createPlayerStats(startingStack),
+    };
+    });
 
     this.globalStats = {
       handCount: 0,
@@ -172,6 +183,31 @@ export class PokerGame {
     this.deck = [];
     this.handLog = [];
     this.lastWinners = [];
+  }
+
+  setPlayerStrategy(playerIndex, strategyKey) {
+    const player = this.players[playerIndex];
+    if (!player) return;
+    player.strategyKey = strategyKey;
+    player.strategy = createStrategyByKey(strategyKey);
+  }
+
+  replacePlayer(playerIndex, { name, stack, strategyKey = DEFAULT_STRATEGY_KEY, resetStats = true } = {}) {
+    const player = this.players[playerIndex];
+    if (!player) return null;
+    player.name = name?.trim() ? name.trim() : player.name;
+    if (Number.isFinite(stack) && stack > 0) player.stack = stack;
+    if (player.stack <= 0) player.stack = this.startingStack;
+    player.folded = false;
+    player.allIn = false;
+    player.currentBet = 0;
+    player.contribution = 0;
+    player.holeCards = [];
+    player.actionHistory = [];
+    player.strategyKey = strategyKey;
+    player.strategy = createStrategyByKey(strategyKey);
+    if (resetStats) player.stats = createPlayerStats(player.stack);
+    return player;
   }
 
   totalTableMoney() {
@@ -350,6 +386,9 @@ export class PokerGame {
         this.refreshToAct(playerIndex);
       }
       player.stats.allIns += 1;
+      if (!player.stats.allInHands.includes(this.globalStats.handCount)) {
+        player.stats.allInHands.push(this.globalStats.handCount);
+      }
       this.globalStats.actionCounts.all_in += 1;
       event.action = 'all_in';
     }
@@ -487,6 +526,55 @@ export class PokerGame {
     });
 
     return result;
+  }
+
+  estimatePublicWinProbability(playerIndex, iterations = 80) {
+    const hero = this.players[playerIndex];
+    if (!hero || hero.folded || hero.holeCards.length < 2) return 0;
+    const opponents = this.players.filter((p) => p.id !== playerIndex && !p.folded && (p.stack > 0 || p.contribution > 0));
+    if (opponents.length === 0) return 1;
+
+    const known = new Set([...this.communityCards, ...hero.holeCards].map((c) => c.code));
+    const availableDeck = createDeck().filter((c) => !known.has(c.code));
+    let wins = 0;
+    let splits = 0;
+    let sims = 0;
+
+    for (let i = 0; i < iterations; i += 1) {
+      const simDeck = shuffle([...availableDeck]);
+      const board = [...this.communityCards];
+      while (board.length < 5 && simDeck.length > 0) board.push(simDeck.pop());
+      if (board.length < 5) continue;
+      const opponentHands = [];
+      for (let o = 0; o < opponents.length; o += 1) {
+        if (simDeck.length < 2) break;
+        opponentHands.push([simDeck.pop(), simDeck.pop()]);
+      }
+      if (opponentHands.length !== opponents.length) continue;
+
+      const heroScore = bestHandScore([...hero.holeCards, ...board]);
+      let bestScore = heroScore;
+      let heroTied = false;
+      let heroStillBest = true;
+      for (const hand of opponentHands) {
+        const oppScore = bestHandScore([...hand, ...board]);
+        const cmp = compareScore(oppScore, bestScore);
+        if (cmp > 0) {
+          heroStillBest = false;
+          heroTied = false;
+          bestScore = oppScore;
+        } else if (cmp === 0 && compareScore(heroScore, bestScore) === 0) {
+          heroTied = true;
+        }
+      }
+
+      sims += 1;
+      if (heroStillBest && !heroTied) wins += 1;
+      else if (heroStillBest && heroTied) splits += 1;
+    }
+
+    if (sims === 0) return 0;
+    return (wins + splits * 0.5) / sims;
   }
 
   step() {
