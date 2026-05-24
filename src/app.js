@@ -195,40 +195,71 @@ function cardNode(card) {
 function updateCharts() {
   const selected = game.players[Number(el.playerSelect.value) || 0];
   if (!selected) return;
-  const stackSeries = selected.stats.stackHistory;
-  const probSeries = selected.stats.winProbHistory.map((v) => Number((v * 100).toFixed(2)));
+
+  const selectedStackSeries = selected.stats.stackHistory;
+
+  const probSeries = selected.stats.winProbHistory.map((v) =>
+    Number((v * 100).toFixed(2))
+  );
+
   const allInPoints = selected.stats.allInHands.map((handNumber) => {
-    const index = Math.min(stackSeries.length - 1, Math.max(0, handNumber));
-    return { index, value: stackSeries[index], color: '#ff9f1c' };
+    const index = Math.min(
+      selectedStackSeries.length - 1,
+      Math.max(0, handNumber)
+    );
+
+    return {
+      index,
+      value: selectedStackSeries[index],
+      color: '#ff9f1c',
+    };
   });
 
   drawChart(el.playerChart, [
-    { values: stackSeries, color: '#ff6b6b' },
+    { values: selectedStackSeries, color: '#ff6b6b' },
     { values: probSeries, color: '#ffd166' },
-    { values: stackSeries, color: 'transparent', points: allInPoints },
+    { values: selectedStackSeries, color: 'transparent', points: allInPoints },
   ]);
+
   renderLegend(el.playerLegend, [
     { color: '#ff6b6b', label: 'Stack' },
     { color: '#ffd166', label: 'Win % (complète)' },
     { color: '#ff9f1c', label: 'Point all-in' },
   ]);
 
-  const stackPalette = ['#ff6b6b', '#4ecdc4', '#ffd166', '#06d6a0', '#118ab2', '#c77dff', '#f72585', '#f4a261', '#90be6d'];
-  const allStackSeries = game.players.map((player, index) => ({
+  const stackPalette = [
+    '#ff6b6b',
+    '#4ecdc4',
+    '#ffd166',
+    '#06d6a0',
+    '#118ab2',
+    '#c77dff',
+    '#f72585',
+    '#f4a261',
+    '#90be6d',
+  ];
+
+  const allPlayersStackSeries = game.players.map((player, index) => ({
     values: player.stats.stackHistory,
     color: stackPalette[index % stackPalette.length],
   }));
-  drawChart(el.allStacksChart, allStackSeries);
-  renderLegend(el.allStacksLegend, game.players.map((player, index) => ({
-    color: stackPalette[index % stackPalette.length],
-    label: player.name,
-  })));
+
+  drawChart(el.allStacksChart, allPlayersStackSeries);
+
+  renderLegend(
+    el.allStacksLegend,
+    game.players.map((player, index) => ({
+      color: stackPalette[index % stackPalette.length],
+      label: player.name,
+    }))
+  );
 
   drawChart(el.globalChart, [
     { values: game.globalStats.totalPots, color: '#ffd166' },
     { values: game.globalStats.averagePotHistory, color: '#06d6a0' },
     { values: game.globalStats.tableMoneyHistory.slice(1), color: '#118ab2' },
   ]);
+
   renderLegend(el.globalLegend, [
     { color: '#ffd166', label: 'Pot total' },
     { color: '#06d6a0', label: 'Pot moyen' },
