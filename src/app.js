@@ -214,11 +214,11 @@ function updateCharts() {
   ]);
 
   const stackPalette = ['#ff6b6b', '#4ecdc4', '#ffd166', '#06d6a0', '#118ab2', '#c77dff', '#f72585', '#f4a261', '#90be6d'];
-  const stackSeries = game.players.map((player, index) => ({
+  const allStackSeries = game.players.map((player, index) => ({
     values: player.stats.stackHistory,
     color: stackPalette[index % stackPalette.length],
   }));
-  drawChart(el.allStacksChart, stackSeries);
+  drawChart(el.allStacksChart, allStackSeries);
   renderLegend(el.allStacksLegend, game.players.map((player, index) => ({
     color: stackPalette[index % stackPalette.length],
     label: player.name,
